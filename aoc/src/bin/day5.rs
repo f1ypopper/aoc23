@@ -1,23 +1,3 @@
-#[derive(Debug)]
-struct Range {
-    source: usize,
-    destination: usize,
-    length: usize,
-}
-impl Range {
-    fn new(m: &str) -> Range {
-        let splitm = m
-            .split_whitespace()
-            .filter(|x| !x.is_empty())
-            .map(|x| x.parse::<usize>().unwrap())
-            .collect::<Vec<usize>>();
-        Range {
-            source: splitm[1],
-            destination: splitm[0],
-            length: splitm[2],
-        }
-    }
-}
 fn part1(source: &String) -> usize {
     let mut lines = source.split("\n\n");
     let seeds = lines
@@ -25,32 +5,33 @@ fn part1(source: &String) -> usize {
         .unwrap()
         .split_whitespace()
         .skip(1)
-        .map(|s| s.parse::<usize>().unwrap())
-        .collect::<Vec<usize>>();
-    let mut maps = Vec::<Vec<Range>>::new();
-    lines.for_each(|line| {
-        maps.push(
-            line.split('\n')
+        .map(|s| s.parse::<usize>().unwrap());
+    let maps = lines
+        .map(|block| {
+            block
+                .lines()
                 .skip(1)
-                .map(|m| Range::new(m))
-                .collect::<Vec<Range>>(),
-        );
-    });
+                .map(|l| {
+                    let map = l
+                        .split_whitespace()
+                        .map(|n| n.parse().unwrap())
+                        .collect::<Vec<usize>>();
+                    (map[1]..map[1] + map[2], map[0])
+                })
+                .collect::<Vec<(std::ops::Range<usize>, usize)>>()
+        })
+        .collect::<Vec<Vec<(std::ops::Range<usize>, usize)>>>();
     seeds
-        .iter()
         .map(|seed| {
-            let mut value = *seed;
-            maps.iter().for_each(|map| {
-                value = map
-                    .iter()
-                    .find_map(|r| {
-                        (value >= r.source && value <= r.source + r.length).then(|| {
-                            ((r.destination as i64 - r.source as i64) + value as i64) as usize
+            maps.iter().fold(seed, |value, map| {
+                map.iter()
+                    .find_map(|(range, destination)| {
+                        range.contains(&value).then(|| {
+                            ((*destination as i64 - range.start as i64) + value as i64) as usize
                         })
                     })
-                    .unwrap_or(value);
-            });
-            value
+                    .unwrap_or(value)
+            })
         })
         .min()
         .unwrap()
@@ -63,34 +44,41 @@ fn part2(source: &String) -> usize {
         .unwrap()
         .split_whitespace()
         .skip(1)
-        .map(|s| s.parse::<usize>().unwrap())
+        .map(|n| n.parse::<usize>().unwrap())
         .collect::<Vec<usize>>();
-    let mut maps = Vec::<Vec<Range>>::new();
-    lines.for_each(|line| {
-        maps.push(
-            line.split('\n')
+
+    let maps = lines
+        .map(|block| {
+            block
+                .lines()
                 .skip(1)
-                .map(|m| Range::new(m))
-                .collect::<Vec<Range>>(),
-        );
-    });
+                .map(|l| {
+                    let map = l
+                        .split_whitespace()
+                        .map(|n| n.parse().unwrap())
+                        .collect::<Vec<usize>>();
+                    (map[1]..map[1] + map[2], map[0])
+                })
+                .collect::<Vec<(std::ops::Range<usize>, usize)>>()
+        })
+        .collect::<Vec<Vec<(std::ops::Range<usize>, usize)>>>();
     seeds
         .chunks_exact(2)
-        .map(|rn| {
-            (rn[0]..rn[0] + rn[1]).into_iter().map(|seed| {
-                let mut value = seed;
-                maps.iter().for_each(|map| {
-                    value = map
-                        .iter()
-                        .find_map(|r| {
-                            (value >= r.source && value <= r.source + r.length).then(|| {
-                                ((r.destination as i64 - r.source as i64) + value as i64) as usize
-                            })
+        .flat_map(|s| {
+            let seedstart = s[0];
+            let length = s[1];
+            seedstart..seedstart + length
+        })
+        .map(|seed| {
+            maps.iter().fold(seed, |value, map| {
+                map.iter()
+                    .find_map(|(range, destination)| {
+                        range.contains(&value).then(|| {
+                            ((*destination as i64 - range.start as i64) + value as i64) as usize
                         })
-                        .unwrap_or(value);
-                });
-                value
-            }).min().unwrap()
+                    })
+                    .unwrap_or(value)
+            })
         })
         .min()
         .unwrap()
@@ -100,5 +88,5 @@ fn main() {
     let sol1 = part1(&source);
     println!("PART1: {sol1}");
     let sol2 = part2(&source);
-    println!("PART1: {sol2}");
+    println!("PART2: {sol2}");
 }
